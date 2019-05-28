@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <StartArguments>-s https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json</StartArguments>
-    <StartWorkingDirectory>$(MSBuildThisFileDirectory)../../</StartWorkingDirectory>
+    <StartWorkingDirectory>C:\src\aspnet\AspNetCore\eng\</StartWorkingDirectory>
   </PropertyGroup>
 
   <ItemGroup>

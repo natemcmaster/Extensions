@@ -13,6 +13,7 @@ using System.Xml.Linq;
 using Microsoft.Extensions.CommandLineUtils;
 using NuGet.Common;
 using NuGet.Configuration;
+using NuGet.Frameworks;
 using NuGet.Packaging;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
@@ -33,12 +34,16 @@ namespace PackageBaselineGenerator
         private readonly CommandOption _source;
         private readonly CommandOption _output;
         private readonly CommandOption _update;
+        private readonly CommandOption _extract;
+        private readonly CommandOption _extractFramework;
 
         public Program()
         {
             _source = Option("-s|--package-source <SOURCE>", "The NuGet source of packages to fetch", CommandOptionType.SingleValue);
             _output = Option("-o|--output <OUT>", "The generated file output path", CommandOptionType.SingleValue);
             _update = Option("-u|--update", "Regenerate the input (Baseline.xml) file.", CommandOptionType.NoValue);
+            _extract = Option("-e|--extract <FOLDER>", "Extract the libraries to a folder.", CommandOptionType.SingleValue);
+            _extractFramework = Option("-ef|--extract-framework <TFM>", "The framework to look for.", CommandOptionType.SingleValue);
 
             Invoke = () => Run().GetAwaiter().GetResult();
         }
@@ -82,6 +87,11 @@ namespace PackageBaselineGenerator
 
             var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "obj", "tmp");
             Directory.CreateDirectory(tempDir);
+
+            var shouldExtract = _extract.HasValue();
+            var extractTfm = shouldExtract
+                ? NuGetFramework.Parse(_extractFramework.Value())
+                : null;
 
             var baselineVersion = input.Root.Attribute("Version").Value;
 
@@ -138,6 +148,37 @@ namespace PackageBaselineGenerator
                         foreach (var dependency in group.Packages)
                         {
                             itemGroup.Add(new XElement("BaselinePackageReference", new XAttribute("Include", dependency.Id), new XAttribute("Version", dependency.VersionRange.ToString())));
+                        }
+                    }
+
+                    if (shouldExtract)
+                    {
+                        var libItems = reader.GetLibItems();
+                        if (libItems == null || !libItems.Any())
+                        {
+                            Console.WriteLine($"Could not find a lib item for {id}");
+                        }
+                        else
+                        {
+                            Directory.CreateDirectory(_extract.Value());
+                            var lib = NuGetFrameworkUtility.GetNearest(libItems, extractTfm);
+                            if (lib == null || lib.Items == null || !lib.Items.Any())
+                            {
+
+                            }
+                            else
+                            {
+                                foreach (var i in lib.Items)
+                                {
+                                    var ext = Path.GetExtension(i);
+                                    if (string.Equals(".dll", ext, StringComparison.OrdinalIgnoreCase))
+                                    {
+
+                                        var path = Path.Combine(_extract.Value(), Path.GetFileName(i));
+                                        reader.ExtractFile(i, path, NullLogger.Instance);
+                                    }
+                                }
+                            }
                         }
                     }
                 }

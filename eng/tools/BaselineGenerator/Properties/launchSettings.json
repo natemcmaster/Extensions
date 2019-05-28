@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BaselineGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "-ef netcoreapp3.0 -e C:\\src\\scripts\\api-review\\2.2\\"
+    }
+  }
+}
